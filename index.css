@@ -1,0 +1,450 @@
+/* Estilos para Leaflet */
+@import 'leaflet/dist/leaflet.css';
+
+/* Estilos globales */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Fix para iconos de Leaflet */
+.leaflet-default-icon-path {
+  background-image: url('https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png');
+}
+
+/* Estilos personalizados para el mapa */
+.custom-map-container {
+  height: 100%;
+  width: 100%;
+  border-radius: 0.75rem;
+  overflow: hidden;
+  border: 1px solid #374151;
+  position: relative;
+}
+
+/* Estilos para popups escalables con scroll */
+.scalable-popup .leaflet-popup-content-wrapper {
+  background: white;
+  color: #374151;
+  border-radius: 0.75rem;
+  border: 2px solid #e5e7eb;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  max-width: 280px !important;
+  min-width: 200px !important;
+  transform-origin: center center;
+  transition: transform 0.15s ease-out, box-shadow 0.15s ease-out;
+  position: relative;
+  z-index: 600;
+}
+
+.scalable-popup .leaflet-popup-content-wrapper:hover {
+  box-shadow: 0 25px 30px -5px rgba(0, 0, 0, 0.15), 0 15px 15px -5px rgba(0, 0, 0, 0.08);
+  z-index: 1000;
+}
+
+/* Indicador visual para scroll */
+.scalable-popup .leaflet-popup-content-wrapper::before {
+  content: "🔍 Scroll para cambiar tamaño";
+  position: absolute;
+  top: -25px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.scalable-popup .leaflet-popup-content-wrapper:hover::before {
+  opacity: 1;
+}
+
+/* Responsivo para pantallas pequeñas - popups compactos */
+@media (max-width: 640px) {
+  .scalable-popup .leaflet-popup-content-wrapper {
+    max-width: 240px !important;
+    min-width: 180px !important;
+  }
+  
+  .scalable-popup .leaflet-popup-content-wrapper::before {
+    content: "Scroll para zoom";
+    font-size: 9px;
+  }
+}
+
+.scalable-popup .leaflet-popup-tip {
+  background: white;
+  border: 2px solid #e5e7eb;
+  transition: transform 0.15s ease-out;
+}
+
+.scalable-popup .leaflet-popup-close-button {
+  display: none !important; /* Ocultar botón por defecto */
+}
+
+/* Botón de cerrar personalizado */
+.custom-close-button {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  transition: all 0.2s ease;
+}
+
+.custom-close-button:hover {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #dc2626;
+  transform: scale(1.1);
+}
+
+.custom-close-button:active {
+  transform: scale(0.95);
+}
+
+/* Prevenir auto-pan en popups */
+.scalable-popup .leaflet-popup {
+  pointer-events: auto;
+}
+
+.scalable-popup .leaflet-popup-content-wrapper {
+  pointer-events: auto;
+}
+
+/* Asegurar que no hay auto-pan en el mapa */
+.leaflet-container {
+  outline: none;
+}
+
+.leaflet-container .leaflet-popup-pane {
+  pointer-events: none;
+}
+
+.leaflet-container .leaflet-popup {
+  pointer-events: auto;
+}
+
+/* Prevenir centrado automático completamente */
+.leaflet-container .leaflet-marker-pane {
+  pointer-events: auto;
+}
+
+.leaflet-container .leaflet-marker-pane .leaflet-marker-icon {
+  pointer-events: auto;
+}
+
+/* Desactivar animaciones de centrado */
+.leaflet-container .leaflet-zoom-animated {
+  transform-origin: center center;
+}
+
+/* Eliminar completamente el auto-pan */
+.leaflet-container .leaflet-popup-pane .leaflet-popup {
+  transform: none !important;
+}
+
+.leaflet-container {
+  --leaflet-popup-auto-pan: none !important;
+}
+
+/* Asegurar que los popups no se centren automáticamente */
+.leaflet-popup {
+  position: absolute !important;
+  transform: none !important;
+  will-change: auto !important;
+}
+
+/* Desactivar todas las animaciones de auto-pan */
+.leaflet-pan-anim {
+  transition: none !important;
+  animation: none !important;
+}
+
+/* Eliminación forzada de popups residuales */
+.leaflet-popup-pane {
+  z-index: 600 !important;
+}
+
+.leaflet-popup-pane .leaflet-popup:not(.scalable-popup) {
+  display: none !important;
+}
+
+/* Asegurar que solo se muestre un popup a la vez */
+.leaflet-popup-pane .leaflet-popup {
+  pointer-events: auto !important;
+  transition: none !important;
+}
+
+/* Prevenir completamente el movimiento del mapa en clicks */
+.leaflet-container {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent !important;
+}
+
+.leaflet-container .leaflet-control-container {
+  pointer-events: auto !important;
+}
+
+.leaflet-container .leaflet-popup-pane,
+.leaflet-container .leaflet-marker-pane,
+.leaflet-container .leaflet-tooltip-pane {
+  pointer-events: none !important;
+}
+
+.leaflet-container .leaflet-popup,
+.leaflet-container .leaflet-marker-icon,
+.leaflet-container .leaflet-tooltip {
+  pointer-events: auto !important;
+}
+
+/* Desactivar doble click zoom completamente */
+.leaflet-container {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+}
+
+.custom-popup .leaflet-popup-content-wrapper {
+  pointer-events: auto !important;
+}
+
+/* Tooltips personalizados */
+.leaflet-tooltip {
+  background: rgba(0, 0, 0, 0.8) !important;
+  border: 1px solid #374151 !important;
+  border-radius: 6px !important;
+  color: white !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.3) !important;
+  backdrop-filter: blur(8px);
+}
+
+.leaflet-tooltip-top:before {
+  border-top-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+.leaflet-tooltip-bottom:before {
+  border-bottom-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+.leaflet-tooltip-left:before {
+  border-left-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+.leaflet-tooltip-right:before {
+  border-right-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Controles del mapa mejorados */
+.leaflet-control-layers {
+  background: rgba(30, 41, 59, 0.95) !important;
+  border: 1px solid #475569 !important;
+  border-radius: 8px !important;
+  backdrop-filter: blur(8px);
+}
+
+.leaflet-control-layers-expanded {
+  color: white !important;
+}
+
+.leaflet-control-layers label {
+  color: #e2e8f0 !important;
+  font-weight: 500;
+}
+
+.leaflet-control-layers-separator {
+  border-top: 1px solid #475569 !important;
+}
+
+/* Zoom controls */
+.leaflet-control-zoom {
+  border: none !important;
+  border-radius: 8px !important;
+  overflow: hidden;
+}
+
+.leaflet-control-zoom a {
+  background: rgba(30, 41, 59, 0.95) !important;
+  border: 1px solid #475569 !important;
+  color: white !important;
+  font-weight: bold !important;
+  backdrop-filter: blur(8px);
+}
+
+.leaflet-control-zoom a:hover {
+  background: rgba(59, 130, 246, 0.8) !important;
+  border-color: #3b82f6 !important;
+}
+
+/* Marcadores personalizados */
+.custom-enhanced-marker {
+  position: relative;
+}
+
+/* Animaciones para marcadores activos */
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+@keyframes bounce {
+  0%, 20%, 53%, 80%, 100% {
+    transform: translate3d(0,0,0);
+  }
+  40%, 43% {
+    transform: translate3d(0,-8px,0);
+  }
+  70% {
+    transform: translate3d(0,-4px,0);
+  }
+  90% {
+    transform: translate3d(0,-2px,0);
+  }
+}
+
+/* Hover effects para marcadores */
+.custom-enhanced-marker:hover {
+  animation: bounce 1s ease-in-out;
+  z-index: 1000;
+}
+
+/* Estilo para ventanas modales */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background: #0f172a;
+  border-radius: 1rem;
+  max-width: 95vw;
+  max-height: 95vh;
+  overflow: auto;
+  border: 1px solid #374151;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* Responsive design para móviles - actualizado */
+@media (max-width: 768px) {
+  .custom-popup .leaflet-popup-content-wrapper {
+    max-width: calc(100vw - 60px) !important;
+    min-width: 260px !important;
+  }
+  
+  .leaflet-control-layers {
+    max-width: 200px;
+  }
+  
+  .leaflet-tooltip {
+    font-size: 10px !important;
+  }
+}
+
+/* Responsive design para tablets */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .custom-popup .leaflet-popup-content-wrapper {
+    max-width: 380px !important;
+  }
+}
+
+/* Mejoras para popups responsivos */
+.responsive-popup .leaflet-popup-content {
+  margin: 8px 12px !important;
+  line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+  .responsive-popup .leaflet-popup-content {
+    margin: 6px 10px !important;
+  }
+}
+
+/* Efectos de carga optimizados */
+.leaflet-tile-loading {
+  opacity: 0.7;
+  filter: brightness(1.1) contrast(0.9);
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+.leaflet-tile {
+  transition: opacity 0.2s ease;
+}
+
+/* Optimización de rendimiento del mapa */
+.leaflet-container {
+  image-rendering: optimizeSpeed;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: optimize-contrast;
+  transform: translateZ(0); /* Hardware acceleration */
+}
+
+.leaflet-zoom-anim .leaflet-tile {
+  transition: none !important;
+}
+
+/* Precarga de contenido */
+.leaflet-tile-container {
+  transform: translateZ(0); /* Hardware acceleration */
+}
+
+/* Mejora de navegabilidad */
+.leaflet-control-zoom {
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+}
+
+.leaflet-control-zoom a {
+  transition: all 0.2s ease !important;
+}
+
+/* Mejoras para polylines */
+.leaflet-interactive {
+  cursor: pointer;
+}
+
+.leaflet-interactive:hover {
+  filter: brightness(1.2);
+  transition: filter 0.2s ease;
+}

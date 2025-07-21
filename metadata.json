@@ -1,0 +1,6 @@
+{
+  "name": "Pronóstico del Clima y Alertas de Papallacta",
+  "description": "Una aplicación web en tiempo real para pronosticar precipitaciones y emitir alertas tempranas en Papallacta, Ecuador. Utiliza un modelo predictivo de IA para generar pronósticos diarios, mensuales y anuales, visualizados con gráficos dinámicos e interactivos.",
+  "requestFramePermissions": [],
+  "prompt": ""
+}
