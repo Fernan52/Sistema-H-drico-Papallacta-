@@ -1,12 +1,28 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from './components/Header';
 import InteractiveEcuadorMap from './components/InteractiveEcuadorMap';
 import ForecastModal from './components/ForecastModal';
 import type { ForecastPeriod } from './types';
+import { setupAutoRefresh, type IntegratedSystemData } from './services/integratedDataService';
 
 function App() {
   const [activeModal, setActiveModal] = useState<ForecastPeriod | null>(null);
+  const [systemData, setSystemData] = useState<IntegratedSystemData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<string>('');
+
+  useEffect(() => {
+    // Configurar actualización automática de datos
+    const cleanup = setupAutoRefresh((data) => {
+      setSystemData(data);
+      setLastUpdate(new Date().toLocaleTimeString('es-ES'));
+      setIsLoading(false);
+    }, 300000); // Actualizar cada 5 minutos
+
+    // Limpiar al desmontar
+    return cleanup;
+  }, []);
 
   const openModal = (period: ForecastPeriod) => {
     setActiveModal(period);
@@ -246,7 +262,9 @@ function App() {
                     <span className="text-2xl">💧</span>
                   </div>
                   <h3 className="text-xl font-bold text-white mb-2">Captación Hídrica</h3>
-                  <div className="text-3xl font-bold text-blue-300 mb-2">18.2 m³/s</div>
+                  <div className="text-3xl font-bold text-blue-300 mb-2">
+                    {isLoading ? '---' : `${systemData?.operations.waterFlow.papallacta || 18.2} m³/s`}
+                  </div>
                   <p className="text-sm text-blue-200 opacity-80 mb-4">Caudal Principal</p>
                   
                   <div className="space-y-3 text-sm">
@@ -265,7 +283,9 @@ function App() {
                     <div className="bg-blue-900/30 rounded-lg p-3 border border-blue-600/20">
                       <div className="flex justify-between">
                         <span className="text-blue-200">Estado:</span>
-                        <span className="text-green-300 font-bold">● Operativo</span>
+                        <span className={`font-bold ${systemData?.systemStatus.overall === 'Óptimo' || systemData?.systemStatus.overall === 'Bueno' ? 'text-green-300' : 'text-yellow-300'}`}>
+                          ● {systemData?.systemStatus.overall || 'Cargando...'}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -279,7 +299,9 @@ function App() {
                     <span className="text-2xl">🏭</span>
                   </div>
                   <h3 className="text-xl font-bold text-white mb-2">Sistema de Tratamiento</h3>
-                  <div className="text-3xl font-bold text-green-300 mb-2">A+</div>
+                  <div className="text-3xl font-bold text-green-300 mb-2">
+                    {isLoading ? '---' : (systemData?.operations.waterQuality.grade || 'A+')}
+                  </div>
                   <p className="text-sm text-green-200 opacity-80 mb-4">Calidad Excelente</p>
                   
                   <div className="space-y-3 text-sm">
@@ -292,13 +314,17 @@ function App() {
                     <div className="bg-green-900/30 rounded-lg p-3 border border-green-600/20">
                       <div className="flex justify-between">
                         <span className="text-green-200">Presión:</span>
-                        <span className="text-white font-bold">125 bar</span>
+                        <span className="text-white font-bold">
+                          {isLoading ? '---' : `${systemData?.operations.systemPressure.treatment || 125} bar`}
+                        </span>
                       </div>
                     </div>
                     <div className="bg-green-900/30 rounded-lg p-3 border border-green-600/20">
                       <div className="flex justify-between">
                         <span className="text-green-200">Eficiencia:</span>
-                        <span className="text-cyan-300 font-bold">96.8%</span>
+                        <span className="text-cyan-300 font-bold">
+                          {isLoading ? '---' : `${systemData?.operations.operational.efficiency || 96.8}%`}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -345,33 +371,84 @@ function App() {
                 <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-3">
                   <span className="w-3 h-3 bg-yellow-500 rounded-full animate-pulse"></span>
                   Centro de Alertas
+                  <span className="text-xs bg-blue-600/30 px-2 py-1 rounded-full text-blue-300">
+                    {systemData?.alerts.length || 0} alertas
+                  </span>
                 </h3>
-                <div className="space-y-3">
-                  <div className="bg-green-900/40 border border-green-600/50 rounded-lg p-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-green-400 text-lg">✅</span>
-                      <div>
-                        <div className="text-green-300 font-medium text-sm">Sistema Operativo Normal</div>
-                        <div className="text-green-200 text-xs opacity-70">Todos los parámetros en rango óptimo</div>
+                <div className="space-y-3 max-h-64 overflow-y-auto">
+                  {isLoading ? (
+                    <div className="text-slate-400 text-center py-4">Cargando alertas...</div>
+                  ) : systemData?.alerts.length ? (
+                    systemData.alerts.slice(0, 5).map((alert, index) => (
+                      <div 
+                        key={alert.id || index}
+                        className={`rounded-lg p-3 border ${
+                          alert.type === 'critical' 
+                            ? 'bg-red-900/40 border-red-600/50' 
+                            : alert.type === 'warning'
+                            ? 'bg-yellow-900/40 border-yellow-600/50'
+                            : 'bg-green-900/40 border-green-600/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="text-lg">
+                            {alert.type === 'critical' ? '🚨' : alert.type === 'warning' ? '⚠️' : '✅'}
+                          </span>
+                          <div className="flex-1">
+                            <div className={`font-medium text-sm ${
+                              alert.type === 'critical' 
+                                ? 'text-red-300' 
+                                : alert.type === 'warning'
+                                ? 'text-yellow-300'
+                                : 'text-green-300'
+                            }`}>
+                              {alert.title}
+                            </div>
+                            <div className={`text-xs opacity-70 ${
+                              alert.type === 'critical' 
+                                ? 'text-red-200' 
+                                : alert.type === 'warning'
+                                ? 'text-yellow-200'
+                                : 'text-green-200'
+                            }`}>
+                              {alert.message}
+                              {alert.location && ` - ${alert.location}`}
+                            </div>
+                            <div className="text-xs text-slate-400 mt-1">
+                              {new Date(alert.timestamp).toLocaleString('es-ES')}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="bg-green-900/40 border border-green-600/50 rounded-lg p-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-green-400 text-lg">✅</span>
+                        <div>
+                          <div className="text-green-300 font-medium text-sm">Sistema Operativo Normal</div>
+                          <div className="text-green-200 text-xs opacity-70">Todos los parámetros en rango óptimo</div>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="bg-yellow-900/40 border border-yellow-600/50 rounded-lg p-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-yellow-400 text-lg">⚠️</span>
-                      <div>
-                        <div className="text-yellow-300 font-medium text-sm">Mantenimiento Programado</div>
-                        <div className="text-yellow-200 text-xs opacity-70">Estación de bombeo - 22/07/2025</div>
-                      </div>
+                  )}
+                </div>
+                
+                {/* Estado de fuentes de datos */}
+                <div className="mt-4 pt-4 border-t border-slate-600/30">
+                  <div className="text-xs text-slate-400 mb-2">Estado de fuentes de datos:</div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div className={`flex items-center gap-1 ${systemData?.systemStatus.dataSourcesOnline.weather ? 'text-green-300' : 'text-red-300'}`}>
+                      <span className={`w-2 h-2 rounded-full ${systemData?.systemStatus.dataSourcesOnline.weather ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                      Meteorología
                     </div>
-                  </div>
-                  <div className="bg-blue-900/40 border border-blue-600/50 rounded-lg p-3">
-                    <div className="flex items-center gap-3">
-                      <span className="text-blue-400 text-lg">ℹ️</span>
-                      <div>
-                        <div className="text-blue-300 font-medium text-sm">Récord de Caudal</div>
-                        <div className="text-blue-200 text-xs opacity-70">Máximo histórico: 19.5 m³/s (15/07)</div>
-                      </div>
+                    <div className={`flex items-center gap-1 ${systemData?.systemStatus.dataSourcesOnline.epmaps ? 'text-green-300' : 'text-red-300'}`}>
+                      <span className={`w-2 h-2 rounded-full ${systemData?.systemStatus.dataSourcesOnline.epmaps ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                      EPMAPS
+                    </div>
+                    <div className={`flex items-center gap-1 ${systemData?.systemStatus.dataSourcesOnline.government ? 'text-green-300' : 'text-red-300'}`}>
+                      <span className={`w-2 h-2 rounded-full ${systemData?.systemStatus.dataSourcesOnline.government ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                      Gobierno
                     </div>
                   </div>
                 </div>
@@ -381,27 +458,58 @@ function App() {
                 <h3 className="text-white font-bold text-lg mb-4 flex items-center gap-3">
                   <span className="w-3 h-3 bg-cyan-500 rounded-full animate-pulse"></span>
                   Condiciones Ambientales
+                  {systemData?.systemStatus.dataSourcesOnline.weather && (
+                    <span className="text-xs bg-green-600/30 px-2 py-1 rounded-full text-green-300">INAMHI/API</span>
+                  )}
                 </h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-slate-600/30">
                     <div className="text-2xl mb-2">🌡️</div>
-                    <div className="text-white font-bold text-lg">12°C</div>
+                    <div className="text-white font-bold text-lg">
+                      {isLoading ? '---' : `${systemData?.weather.temperature || 12}°C`}
+                    </div>
                     <div className="text-slate-400 text-xs">Temperatura</div>
                   </div>
                   <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-slate-600/30">
                     <div className="text-2xl mb-2">💧</div>
-                    <div className="text-white font-bold text-lg">85%</div>
+                    <div className="text-white font-bold text-lg">
+                      {isLoading ? '---' : `${systemData?.weather.humidity || 85}%`}
+                    </div>
                     <div className="text-slate-400 text-xs">Humedad</div>
                   </div>
                   <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-slate-600/30">
                     <div className="text-2xl mb-2">🌧️</div>
-                    <div className="text-white font-bold text-lg">2.5 mm/h</div>
+                    <div className="text-white font-bold text-lg">
+                      {isLoading ? '---' : `${systemData?.weather.precipitation || 2.5} mm/h`}
+                    </div>
                     <div className="text-slate-400 text-xs">Precipitación</div>
                   </div>
                   <div className="bg-slate-800/50 rounded-lg p-4 text-center border border-slate-600/30">
                     <div className="text-2xl mb-2">💨</div>
-                    <div className="text-white font-bold text-lg">15 km/h</div>
-                    <div className="text-slate-400 text-xs">Viento NE</div>
+                    <div className="text-white font-bold text-lg">
+                      {isLoading ? '---' : `${systemData?.weather.windSpeed || 15} km/h`}
+                    </div>
+                    <div className="text-slate-400 text-xs">
+                      Viento {systemData?.weather.windDirection || 'NE'}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Información adicional gubernamental */}
+                <div className="mt-4 pt-4 border-t border-slate-600/30">
+                  <div className="grid grid-cols-1 gap-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Calidad del aire:</span>
+                      <span className="text-green-300">{systemData?.government.environmental.airQuality || 'Buena'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Índice UV:</span>
+                      <span className="text-orange-300">{systemData?.government.environmental.uvIndex || 8}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-400">Área protegida:</span>
+                      <span className="text-blue-300">Antisana</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -458,9 +566,40 @@ function App() {
                 <div className="bg-blue-900/30 border border-blue-600/30 rounded-lg p-3">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></span>
-                    <span className="text-blue-300 text-sm">Última actualización: {new Date().toLocaleTimeString()}</span>
+                    <span className="text-blue-300 text-sm">
+                      Última actualización: {lastUpdate || new Date().toLocaleTimeString('es-ES')}
+                    </span>
+                  </div>
+                  <div className="text-xs text-blue-200 mt-1">
+                    Score del sistema: {systemData?.systemStatus.score || 100}/100
+                    {systemData?.systemStatus.dataSourcesOnline && (
+                      <span className="ml-2">
+                        | APIs: {Object.values(systemData.systemStatus.dataSourcesOnline).filter(Boolean).length}/4 online
+                        {systemData.systemStatus.dataSourcesOnline.arimaModel && (
+                          <span className="text-green-400"> | ARIMA ✓</span>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </div>
+
+                {/* Estado del Modelo ARIMA */}
+                {systemData?.arimaForecasts && (
+                  <div className="bg-purple-900/30 border border-purple-600/30 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="w-2 h-2 bg-purple-400 rounded-full animate-pulse"></span>
+                      <span className="text-purple-300 text-sm font-medium">Modelo ARIMA Entrenado</span>
+                    </div>
+                    <div className="text-xs text-purple-200 space-y-1">
+                      <div>Estado: {systemData.arimaForecasts.modelStatus.loaded ? '✅ Activo' : '❌ Inactivo'}</div>
+                      <div>Versión: {systemData.arimaForecasts.modelStatus.version}</div>
+                      <div>Predicciones: {systemData.arimaForecasts.daily?.length || 0} días disponibles</div>
+                      {systemData.arimaForecasts.daily?.length > 0 && (
+                        <div>Confianza promedio: {(systemData.arimaForecasts.daily.reduce((acc: number, p: any) => acc + (p.confidence || 0), 0) / systemData.arimaForecasts.daily.length * 100).toFixed(1)}%</div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>

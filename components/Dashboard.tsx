@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import type { WeatherDataPoint, ForecastPeriod, Alert } from '../types';
-import { generateInitialData, generateForecast } from '../services/geminiService';
+import { generateHybridForecast, generateInitialDataFromSources } from '../services/hybridForecastService';
 import ControlPanel from './ControlPanel';
 import DataVisualization from './DataVisualization';
 import AlertsPanel from './AlertsPanel';
+import MonthlyAlertsForYear from './MonthlyAlertsForYear';
 import LoadingSpinner from './LoadingSpinner';
+import ArimaForecast from './ArimaForecast';
 import { ExclamationTriangle } from './Icons';
 import ForecastSummary from './ForecastSummary';
 
@@ -26,14 +28,28 @@ const Dashboard: React.FC<DashboardProps> = ({ initialPeriod = 'Diario' }) => {
         setIsLoading(true);
         setError(null);
         setForecastData([]);
+        setAlerts([]);
 
         try {
-            const { forecast, alerts } = await generateForecast(initialData, period);
-            setForecastData(forecast);
-            setAlerts(alerts);
+            console.log(`🚀 Iniciando pronóstico híbrido para período: ${period}`);
+            const result = await generateHybridForecast(initialData, period);
+            
+            // Usar los datos tal como vienen de la predicción (sin ajustar fechas)
+            setForecastData(result.forecast);
+            setHistoricalData(initialData);
+            setAlerts(result.alerts);
+            
+            console.log(`✅ Pronóstico híbrido completado:`);
+            console.log(`   � Confianza: ${(result.confidence * 100).toFixed(1)}%`);
+            console.log(`   🔬 ARIMA: ${result.sources.arima ? 'SÍ' : 'NO'}`);
+            console.log(`   🌤️ INAMHI: ${result.sources.inamhi ? 'SÍ' : 'NO'}`);
+            console.log(`   💧 PARAMH2O: ${result.sources.paramh2o ? 'SÍ' : 'NO'}`);
+            console.log(`   🤖 Gemini: ${result.sources.gemini ? 'SÍ' : 'NO'}`);
+            
         } catch (e) {
             const err = e as Error;
-            setError(err.message || 'Ocurrió un error desconocido.');
+            console.error('❌ Error en pronóstico híbrido:', err);
+            setError(err.message || 'Ocurrió un error en el sistema de pronóstico híbrido.');
             setAlerts([]);
         } finally {
             setIsLoading(false);
@@ -45,12 +61,14 @@ const Dashboard: React.FC<DashboardProps> = ({ initialPeriod = 'Diario' }) => {
             setIsLoading(true);
             setError(null);
             try {
-                const data = await generateInitialData();
+                console.log('🔄 Obteniendo datos históricos híbridos...');
+                const data = await generateInitialDataFromSources();
                 setHistoricalData(data);
                 await handleFetchForecast(initialPeriod, data);
             } catch (e) {
                 const err = e as Error;
-                setError(err.message || 'Ocurrió un error desconocido.');
+                console.error('❌ Error obteniendo datos iniciales:', err);
+                setError(err.message || 'Error obteniendo datos del sistema.');
                 setHistoricalData([]);
             }
         };
@@ -77,7 +95,18 @@ const Dashboard: React.FC<DashboardProps> = ({ initialPeriod = 'Diario' }) => {
                 isLoading={isLoading}
             />
 
-            <AlertsPanel alerts={alerts} isLoading={isLoading} />
+            {/* Alertas normales para diario y mensual */}
+            {forecastPeriod !== 'Anual' && (
+                <AlertsPanel alerts={alerts} isLoading={isLoading} />
+            )}
+            
+            {/* Alertas mensuales especializadas para período anual */}
+            {forecastPeriod === 'Anual' && (
+                <MonthlyAlertsForYear forecastData={forecastData} isLoading={isLoading} />
+            )}
+            
+            {/* Pronóstico del Modelo ARIMA Entrenado */}
+            <ArimaForecast period={forecastPeriod} className="mb-6" />
             
             <ForecastSummary 
                 forecastData={forecastData}
@@ -97,7 +126,12 @@ const Dashboard: React.FC<DashboardProps> = ({ initialPeriod = 'Diario' }) => {
                 {isLoading && !error && (
                     <div className="text-center">
                         <LoadingSpinner />
-                        <p className="mt-4 text-slate-400">Analizando patrones meteorológicos...</p>
+                        <p className="mt-4 text-slate-400">
+                            Analizando datos híbridos: ARIMA + INAMHI + PARAMH2O + Gemini AI...
+                        </p>
+                        <div className="mt-2 text-xs text-slate-500">
+                            Integrando múltiples fuentes para máxima precisión
+                        </div>
                     </div>
                 )}
 
